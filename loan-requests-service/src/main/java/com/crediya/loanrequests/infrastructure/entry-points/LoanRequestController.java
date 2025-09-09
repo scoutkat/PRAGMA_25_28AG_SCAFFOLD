@@ -1,4 +1,4 @@
-package com.crediya.loanrequests.infrastructure.controller;
+package com.crediya.loanrequests.infrastructure.entry-points;
 
 import com.crediya.loanrequests.domain.exception.InvalidLoanRequestException;
 import com.crediya.loanrequests.domain.exception.LoanTypeNotFoundException;

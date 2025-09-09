@@ -1,4 +1,4 @@
-package com.crediya.authentication.infrastructure.controller;
+package com.crediya.authentication.infrastructure.entry-points;
 
 import com.crediya.authentication.domain.exception.UserAlreadyExistsException;
 import com.crediya.authentication.domain.exception.UserNotFoundException;

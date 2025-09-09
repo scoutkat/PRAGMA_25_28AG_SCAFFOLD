@@ -6,6 +6,7 @@ import com.crediya.loanrequests.domain.exception.UserValidationException;
 import com.crediya.loanrequests.domain.model.LoanRequest;
 import com.crediya.loanrequests.domain.port.LoanRequestService;
 import com.crediya.loanrequests.infrastructure.dto.LoanRequestRequest;
+import com.crediya.loanrequests.infrastructure.entry-points.LoanRequestController;
 import com.crediya.loanrequests.infrastructure.mapper.LoanRequestMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
