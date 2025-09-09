@@ -1,0 +1,22 @@
+# GitFlow Configuration for CrediYa Platform
+# This file defines the branching strategy for the project
+
+[gitflow "branch"]
+    master = main
+    develop = develop
+
+[gitflow "prefix"]
+    feature = feature/
+    release = release/
+    hotfix = hotfix/
+    support = support/
+    versiontag = v
+
+[gitflow "path"]
+    hooks = .git/hooks
+
+# Branch naming conventions
+# - feature/US-1-user-registration
+# - feature/US-2-loan-request-processing
+# - release/v1.0.0
+# - hotfix/critical-bug-fix

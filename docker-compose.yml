@@ -1,0 +1,111 @@
+version: '3.8'
+
+# Docker Compose configuration for CrediYa microservices
+# This file defines the services needed for local development and testing
+
+services:
+  # PostgreSQL database for Authentication service
+  postgres-auth:
+    image: postgres:15-alpine
+    container_name: crediya-postgres-auth
+    environment:
+      POSTGRES_DB: crediya_auth
+      POSTGRES_USER: crediya_user
+      POSTGRES_PASSWORD: crediya_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+      - ./authentication-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crediya_user -d crediya_auth"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # PostgreSQL database for Loan Requests service
+  postgres-loans:
+    image: postgres:15-alpine
+    container_name: crediya-postgres-loans
+    environment:
+      POSTGRES_DB: crediya_loans
+      POSTGRES_USER: crediya_user
+      POSTGRES_PASSWORD: crediya_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_loans_data:/var/lib/postgresql/data
+      - ./loan-requests-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ./loan-requests-service/src/main/resources/data.sql:/docker-entrypoint-initdb.d/data.sql
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crediya_user -d crediya_loans"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Authentication Service
+  authentication-service:
+    build:
+      context: ./authentication-service
+      dockerfile: Dockerfile
+    container_name: crediya-authentication-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres-auth:5432/crediya_auth
+      SPRING_R2DBC_USERNAME: crediya_user
+      SPRING_R2DBC_PASSWORD: crediya_password
+    depends_on:
+      postgres-auth:
+        condition: service_healthy
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Loan Requests Service
+  loan-requests-service:
+    build:
+      context: ./loan-requests-service
+      dockerfile: Dockerfile
+    container_name: crediya-loan-requests-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres-loans:5432/crediya_loans
+      SPRING_R2DBC_USERNAME: crediya_user
+      SPRING_R2DBC_PASSWORD: crediya_password
+      EXTERNAL_SERVICES_AUTHENTICATION_BASE_URL: http://authentication-service:8081
+    depends_on:
+      postgres-loans:
+        condition: service_healthy
+      authentication-service:
+        condition: service_healthy
+    networks:
+      - crediya-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Named volumes for data persistence
+volumes:
+  postgres_auth_data:
+    driver: local
+  postgres_loans_data:
+    driver: local
+
+# Custom network for service communication
+networks:
+  crediya-network:
+    driver: bridge

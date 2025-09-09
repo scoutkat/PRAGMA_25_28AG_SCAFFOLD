@@ -1,0 +1,82 @@
+# API Gateway configuration for CrediYa microservices
+# This file defines the API Gateway routes and integrations
+
+apiVersion: apigatewayv2/v1
+kind: API
+metadata:
+  name: crediya-api
+spec:
+  name: CrediYa API Gateway
+  description: API Gateway for CrediYa microservices
+  protocolType: HTTP
+  corsConfiguration:
+    allowOrigins:
+      - "*"
+    allowMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      - OPTIONS
+    allowHeaders:
+      - Content-Type
+      - Authorization
+      - X-Requested-With
+    maxAge: 86400
+
+---
+apiVersion: apigatewayv2/v1
+kind: Integration
+metadata:
+  name: authentication-service-integration
+spec:
+  apiId: !Ref CrediYaAPI
+  integrationType: HTTP_PROXY
+  integrationMethod: ANY
+  integrationUri: !Sub "http://${AuthenticationServiceLoadBalancer.DNSName}:8081"
+  payloadFormatVersion: "1.0"
+
+---
+apiVersion: apigatewayv2/v1
+kind: Integration
+metadata:
+  name: loan-requests-service-integration
+spec:
+  apiId: !Ref CrediYaAPI
+  integrationType: HTTP_PROXY
+  integrationMethod: ANY
+  integrationUri: !Sub "http://${LoanRequestsServiceLoadBalancer.DNSName}:8082"
+  payloadFormatVersion: "1.0"
+
+---
+apiVersion: apigatewayv2/v1
+kind: Route
+metadata:
+  name: authentication-routes
+spec:
+  apiId: !Ref CrediYaAPI
+  routeKey: "ANY /api/v1/usuarios/{proxy+}"
+  target: !Ref AuthenticationServiceIntegration
+
+---
+apiVersion: apigatewayv2/v1
+kind: Route
+metadata:
+  name: loan-requests-routes
+spec:
+  apiId: !Ref CrediYaAPI
+  routeKey: "ANY /api/v1/solicitud/{proxy+}"
+  target: !Ref LoanRequestsServiceIntegration
+
+---
+apiVersion: apigatewayv2/v1
+kind: Stage
+metadata:
+  name: prod
+spec:
+  apiId: !Ref CrediYaAPI
+  stageName: prod
+  autoDeploy: true
+  defaultRouteSettings:
+    throttlingRateLimit: 1000
+    throttlingBurstLimit: 2000
