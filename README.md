@@ -2,6 +2,21 @@
 
 CrediYa is a comprehensive digital platform designed to streamline and optimize personal loan request management, eliminating the need for manual and in-person processes.
 
+## 📅 Pragma 25-28 Agosto Implementation
+
+This implementation was completed during the Pragma 25-28 Agosto training period and includes:
+
+- **Complete microservices architecture** with Authentication and Loan Requests services
+- **Reactive programming** with WebFlux throughout
+- **Hexagonal architecture** with clean separation of concerns
+- **Comprehensive testing** with reactive testing patterns
+- **Docker containerization** ready for deployment
+- **AWS ECS configuration** for production deployment
+- **GitFlow branching strategy** implemented
+- **Full documentation** and API specifications
+
+**Branch**: `pragma_25_28_agosto` - Contains the complete implementation from the training period.
+
 ## Architecture
 
 The platform is built using a **microservices architecture** with the following key components:
