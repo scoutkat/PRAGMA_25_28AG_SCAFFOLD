@@ -6,16 +6,16 @@ import com.crediya.loanrequests.infrastructure.dto.LoanRequestResponse;
 import org.springframework.stereotype.Component;
 
 /**
- * Mapper class for converting between domain entities and DTOs
- * This class handles the mapping between the domain layer and infrastructure layer
- * Following the separation of concerns principle
+ * Mapper class for converting between DTOs and domain entities
+ * Follows the principle of separation of concerns
+ * Handles all data transformation between API layer and domain layer
  */
 @Component
 public class LoanRequestMapper {
     
     /**
-     * Converts a LoanRequestRequest DTO to a LoanRequest domain entity
-     * @param request the request DTO
+     * Converts LoanRequestRequest DTO to LoanRequest domain entity
+     * @param request the loan request creation request DTO
      * @return LoanRequest domain entity
      */
     public LoanRequest toDomain(LoanRequestRequest request) {
@@ -32,8 +32,8 @@ public class LoanRequestMapper {
     }
     
     /**
-     * Converts a LoanRequest domain entity to a LoanRequestResponse DTO
-     * @param loanRequest the domain entity
+     * Converts LoanRequest domain entity to LoanRequestResponse DTO
+     * @param loanRequest the loan request domain entity
      * @return LoanRequestResponse DTO
      */
     public LoanRequestResponse toResponse(LoanRequest loanRequest) {
@@ -48,6 +48,7 @@ public class LoanRequestMapper {
         response.setAmount(loanRequest.getAmount());
         response.setTermMonths(loanRequest.getTermMonths());
         response.setStatus(loanRequest.getStatus() != null ? loanRequest.getStatus().name() : null);
+        response.setStatusDisplayName(loanRequest.getStatus() != null ? loanRequest.getStatus().getDisplayName() : null);
         response.setMonthlyPayment(loanRequest.getMonthlyPayment());
         response.setTotalInterest(loanRequest.getTotalInterest());
         response.setTotalAmount(loanRequest.getTotalAmount());
@@ -58,5 +59,21 @@ public class LoanRequestMapper {
         response.setRejectionReason(loanRequest.getRejectionReason());
         
         return response;
+    }
+    
+    /**
+     * Updates an existing LoanRequest domain entity with data from LoanRequestRequest
+     * @param loanRequest the existing loan request entity
+     * @param request the loan request creation request DTO
+     */
+    public void updateDomain(LoanRequest loanRequest, LoanRequestRequest request) {
+        if (loanRequest == null || request == null) {
+            return;
+        }
+        
+        loanRequest.setUserEmail(request.getUserEmail());
+        loanRequest.setLoanTypeId(request.getLoanTypeId());
+        loanRequest.setAmount(request.getAmount());
+        loanRequest.setTermMonths(request.getTermMonths());
     }
 }

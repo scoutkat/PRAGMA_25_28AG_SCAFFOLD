@@ -25,9 +25,23 @@ public interface LoanRequestRepository {
     Mono<LoanRequest> findById(Long id);
     
     /**
+     * Finds loan requests by user email
+     * @param userEmail the user email to search for
+     * @return Mono containing the loan request if found, empty if not found
+     */
+    Mono<LoanRequest> findByUserEmail(String userEmail);
+    
+    /**
      * Updates an existing loan request
      * @param loanRequest the loan request entity with updated information
      * @return Mono containing the updated loan request
      */
     Mono<LoanRequest> update(LoanRequest loanRequest);
+    
+    /**
+     * Deletes a loan request by ID
+     * @param id the loan request ID to delete
+     * @return Mono containing true if deleted successfully, false otherwise
+     */
+    Mono<Boolean> deleteById(Long id);
 }

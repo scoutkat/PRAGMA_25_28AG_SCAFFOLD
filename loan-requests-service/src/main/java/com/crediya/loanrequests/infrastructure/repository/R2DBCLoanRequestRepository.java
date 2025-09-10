@@ -33,9 +33,10 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
         
         String insertQuery = """
             INSERT INTO loan_requests (user_email, loan_type_id, amount, term_months, status, 
-                                     monthly_payment, total_interest, total_amount, created_at, updated_at)
+                                     monthly_payment, total_interest, total_amount, created_at, updated_at, 
+                                     reviewed_at, reviewed_by, rejection_reason)
             VALUES (:userEmail, :loanTypeId, :amount, :termMonths, :status, :monthlyPayment, 
-                   :totalInterest, :totalAmount, :createdAt, :updatedAt)
+                    :totalInterest, :totalAmount, :createdAt, :updatedAt, :reviewedAt, :reviewedBy, :rejectionReason)
             """;
         
         return databaseClient.sql(insertQuery)
@@ -43,19 +44,23 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
                 .bind("loanTypeId", loanRequest.getLoanTypeId())
                 .bind("amount", loanRequest.getAmount())
                 .bind("termMonths", loanRequest.getTermMonths())
-                .bind("status", loanRequest.getStatus() != null ? loanRequest.getStatus().name() : "PENDING_REVIEW")
+                .bind("status", loanRequest.getStatus() != null ? loanRequest.getStatus().name() : null)
                 .bind("monthlyPayment", loanRequest.getMonthlyPayment())
                 .bind("totalInterest", loanRequest.getTotalInterest())
                 .bind("totalAmount", loanRequest.getTotalAmount())
                 .bind("createdAt", loanRequest.getCreatedAt())
                 .bind("updatedAt", loanRequest.getUpdatedAt())
+                .bind("reviewedAt", loanRequest.getReviewedAt())
+                .bind("reviewedBy", loanRequest.getReviewedBy())
+                .bind("rejectionReason", loanRequest.getRejectionReason())
                 .filter((statement, executeFunction) -> statement.returnGeneratedValues("id"))
                 .map((row, metadata) -> {
                     loanRequest.setId(row.get("id", Long.class));
                     return loanRequest;
                 })
                 .one()
-                .doOnSuccess(savedLoanRequest -> logger.debug("Loan request saved successfully with ID: {}", savedLoanRequest.getId()))
+                .doOnSuccess(savedRequest -> logger.debug("Loan request saved successfully with ID: {}", 
+                        savedRequest.getId()))
                 .doOnError(error -> logger.error("Error saving loan request: {}", error.getMessage()));
     }
     
@@ -74,13 +79,39 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
                 .bind("id", id)
                 .map((row, metadata) -> mapRowToLoanRequest(row))
                 .one()
-                .doOnSuccess(loanRequest -> {
-                    if (loanRequest != null) {
+                .doOnSuccess(request -> {
+                    if (request != null) {
                         logger.debug("Loan request found by ID: {}", id);
                     }
                 })
                 .doOnError(error -> logger.error("Error finding loan request by ID: {}, error: {}", 
                         id, error.getMessage()));
+    }
+    
+    @Override
+    public Mono<LoanRequest> findByUserEmail(String userEmail) {
+        logger.debug("Finding loan request by user email: {}", userEmail);
+        
+        String selectQuery = """
+            SELECT id, user_email, loan_type_id, amount, term_months, status, monthly_payment, 
+                   total_interest, total_amount, created_at, updated_at, reviewed_at, reviewed_by, rejection_reason
+            FROM loan_requests 
+            WHERE user_email = :userEmail
+            ORDER BY created_at DESC
+            LIMIT 1
+            """;
+        
+        return databaseClient.sql(selectQuery)
+                .bind("userEmail", userEmail)
+                .map((row, metadata) -> mapRowToLoanRequest(row))
+                .one()
+                .doOnSuccess(request -> {
+                    if (request != null) {
+                        logger.debug("Loan request found for user: {}", userEmail);
+                    }
+                })
+                .doOnError(error -> logger.error("Error finding loan request for user: {}, error: {}", 
+                        userEmail, error.getMessage()));
     }
     
     @Override
@@ -91,7 +122,7 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
             UPDATE loan_requests 
             SET user_email = :userEmail, loan_type_id = :loanTypeId, amount = :amount, 
                 term_months = :termMonths, status = :status, monthly_payment = :monthlyPayment, 
-                total_interest = :totalInterest, total_amount = :totalAmount, updated_at = :updatedAt,
+                total_interest = :totalInterest, total_amount = :totalAmount, updated_at = :updatedAt, 
                 reviewed_at = :reviewedAt, reviewed_by = :reviewedBy, rejection_reason = :rejectionReason
             WHERE id = :id
             """;
@@ -102,7 +133,7 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
                 .bind("loanTypeId", loanRequest.getLoanTypeId())
                 .bind("amount", loanRequest.getAmount())
                 .bind("termMonths", loanRequest.getTermMonths())
-                .bind("status", loanRequest.getStatus() != null ? loanRequest.getStatus().name() : "PENDING_REVIEW")
+                .bind("status", loanRequest.getStatus() != null ? loanRequest.getStatus().name() : null)
                 .bind("monthlyPayment", loanRequest.getMonthlyPayment())
                 .bind("totalInterest", loanRequest.getTotalInterest())
                 .bind("totalAmount", loanRequest.getTotalAmount())
@@ -111,9 +142,26 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
                 .bind("reviewedBy", loanRequest.getReviewedBy())
                 .bind("rejectionReason", loanRequest.getRejectionReason())
                 .then(Mono.just(loanRequest))
-                .doOnSuccess(updatedLoanRequest -> logger.debug("Loan request updated successfully: {}", updatedLoanRequest.getId()))
+                .doOnSuccess(updatedRequest -> logger.debug("Loan request updated successfully: {}", 
+                        updatedRequest.getId()))
                 .doOnError(error -> logger.error("Error updating loan request: {}, error: {}", 
                         loanRequest.getId(), error.getMessage()));
+    }
+    
+    @Override
+    public Mono<Boolean> deleteById(Long id) {
+        logger.debug("Deleting loan request by ID: {}", id);
+        
+        String deleteQuery = "DELETE FROM loan_requests WHERE id = :id";
+        
+        return databaseClient.sql(deleteQuery)
+                .bind("id", id)
+                .fetch()
+                .rowsUpdated()
+                .map(rowsUpdated -> rowsUpdated > 0)
+                .doOnSuccess(deleted -> logger.debug("Loan request deletion result for ID {}: {}", id, deleted))
+                .doOnError(error -> logger.error("Error deleting loan request by ID: {}, error: {}", 
+                        id, error.getMessage()));
     }
     
     /**
@@ -131,12 +179,7 @@ public class R2DBCLoanRequestRepository implements LoanRequestRepository {
         
         String statusStr = row.get("status", String.class);
         if (statusStr != null) {
-            try {
-                loanRequest.setStatus(LoanRequest.Status.valueOf(statusStr));
-            } catch (IllegalArgumentException e) {
-                logger.warn("Invalid status value in database: {}", statusStr);
-                loanRequest.setStatus(LoanRequest.Status.PENDING_REVIEW);
-            }
+            loanRequest.setStatus(LoanRequest.Status.valueOf(statusStr));
         }
         
         loanRequest.setMonthlyPayment(row.get("monthly_payment", BigDecimal.class));

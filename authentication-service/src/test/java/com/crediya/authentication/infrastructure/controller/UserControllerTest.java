@@ -4,7 +4,6 @@ import com.crediya.authentication.domain.exception.UserAlreadyExistsException;
 import com.crediya.authentication.domain.model.User;
 import com.crediya.authentication.domain.port.UserService;
 import com.crediya.authentication.infrastructure.dto.UserRegistrationRequest;
-import com.crediya.authentication.infrastructure.entry-points.UserController;
 import com.crediya.authentication.infrastructure.mapper.UserMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

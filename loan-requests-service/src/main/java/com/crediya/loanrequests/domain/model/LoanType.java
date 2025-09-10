@@ -1,12 +1,11 @@
 package com.crediya.loanrequests.domain.model;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 
 /**
  * LoanType domain entity representing different loan products offered by CrediYa
- * This class encapsulates loan type data and business rules for loan calculations
+ * This class encapsulates loan product information and business rules
  * Following Domain-Driven Design principles
  */
 public class LoanType {
@@ -133,96 +132,67 @@ public class LoanType {
     /**
      * Business method to validate if a loan amount is within the allowed range
      * @param amount the loan amount to validate
-     * @return true if amount is within min and max range
+     * @return true if amount is valid, false otherwise
      */
     public boolean isValidAmount(BigDecimal amount) {
-        if (amount == null) {
-            return false;
-        }
-        return amount.compareTo(minAmount) >= 0 && amount.compareTo(maxAmount) <= 0;
+        return amount != null && 
+               amount.compareTo(minAmount) >= 0 && 
+               amount.compareTo(maxAmount) <= 0;
     }
 
     /**
      * Business method to validate if a loan term is within the allowed range
      * @param termMonths the loan term in months to validate
-     * @return true if term is within min and max range
+     * @return true if term is valid, false otherwise
      */
     public boolean isValidTerm(Integer termMonths) {
-        if (termMonths == null) {
-            return false;
-        }
-        return termMonths >= minTermMonths && termMonths <= maxTermMonths;
+        return termMonths != null && 
+               termMonths >= minTermMonths && 
+               termMonths <= maxTermMonths;
     }
 
     /**
-     * Business method to calculate monthly payment using compound interest formula
-     * Formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]
-     * Where: M = Monthly payment, P = Principal amount, r = Monthly interest rate, n = Number of payments
-     * @param principal the loan amount
+     * Business method to calculate monthly payment for a loan
+     * Uses the standard loan payment formula
+     * @param amount the loan amount
      * @param termMonths the loan term in months
      * @return calculated monthly payment
      */
-    public BigDecimal calculateMonthlyPayment(BigDecimal principal, Integer termMonths) {
-        if (principal == null || termMonths == null || principal.compareTo(BigDecimal.ZERO) <= 0 || termMonths <= 0) {
+    public BigDecimal calculateMonthlyPayment(BigDecimal amount, Integer termMonths) {
+        if (amount == null || termMonths == null || termMonths <= 0) {
             return BigDecimal.ZERO;
         }
 
         // Convert annual interest rate to monthly rate
-        BigDecimal monthlyRate = interestRate.divide(BigDecimal.valueOf(100), 6, RoundingMode.HALF_UP)
-                .divide(BigDecimal.valueOf(12), 6, RoundingMode.HALF_UP);
+        BigDecimal monthlyRate = interestRate.divide(new BigDecimal("100"), 6, BigDecimal.ROUND_HALF_UP)
+                .divide(new BigDecimal("12"), 6, BigDecimal.ROUND_HALF_UP);
 
-        // Calculate (1 + r)^n
+        // Calculate monthly payment using the formula: P * [r(1+r)^n] / [(1+r)^n - 1]
         BigDecimal onePlusRate = BigDecimal.ONE.add(monthlyRate);
-        BigDecimal power = onePlusRate.pow(termMonths);
-
-        // Calculate monthly payment using the formula
-        BigDecimal numerator = monthlyRate.multiply(power);
-        BigDecimal denominator = power.subtract(BigDecimal.ONE);
+        BigDecimal powerTerm = onePlusRate.pow(termMonths);
+        BigDecimal numerator = monthlyRate.multiply(powerTerm);
+        BigDecimal denominator = powerTerm.subtract(BigDecimal.ONE);
         
-        if (denominator.compareTo(BigDecimal.ZERO) == 0) {
-            // If denominator is zero, return simple division
-            return principal.divide(BigDecimal.valueOf(termMonths), 2, RoundingMode.HALF_UP);
-        }
-
-        return principal.multiply(numerator).divide(denominator, 2, RoundingMode.HALF_UP);
+        return amount.multiply(numerator).divide(denominator, 2, BigDecimal.ROUND_HALF_UP);
     }
 
     /**
-     * Business method to calculate total interest over the loan term
-     * @param principal the loan amount
+     * Business method to calculate total interest for a loan
+     * @param amount the loan amount
      * @param termMonths the loan term in months
      * @return calculated total interest
      */
-    public BigDecimal calculateTotalInterest(BigDecimal principal, Integer termMonths) {
-        if (principal == null || termMonths == null || principal.compareTo(BigDecimal.ZERO) <= 0 || termMonths <= 0) {
-            return BigDecimal.ZERO;
-        }
-
-        BigDecimal monthlyPayment = calculateMonthlyPayment(principal, termMonths);
-        BigDecimal totalPayments = monthlyPayment.multiply(BigDecimal.valueOf(termMonths));
-        return totalPayments.subtract(principal);
+    public BigDecimal calculateTotalInterest(BigDecimal amount, Integer termMonths) {
+        BigDecimal monthlyPayment = calculateMonthlyPayment(amount, termMonths);
+        BigDecimal totalPayment = monthlyPayment.multiply(new BigDecimal(termMonths));
+        return totalPayment.subtract(amount);
     }
 
     /**
-     * Business method to deactivate the loan type
+     * Business method to deactivate loan type
      */
     public void deactivate() {
         this.isActive = false;
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    /**
-     * Business method to update loan type information
-     */
-    public void update(String name, String description, BigDecimal minAmount, BigDecimal maxAmount,
-                      Integer minTermMonths, Integer maxTermMonths, BigDecimal interestRate) {
-        this.name = name;
-        this.description = description;
-        this.minAmount = minAmount;
-        this.maxAmount = maxAmount;
-        this.minTermMonths = minTermMonths;
-        this.maxTermMonths = maxTermMonths;
-        this.interestRate = interestRate;
         this.updatedAt = LocalDateTime.now();
     }
 

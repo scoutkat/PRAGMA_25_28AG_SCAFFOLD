@@ -27,153 +27,141 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("User Service Implementation Tests")
 class UserServiceImplTest {
-    
+
     @Mock
     private UserRepository userRepository;
-    
+
     private UserServiceImpl userService;
-    
+    private User testUser;
+
     @BeforeEach
     void setUp() {
         userService = new UserServiceImpl(userRepository);
-    }
-    
-    @Test
-    @DisplayName("Should register user successfully when email does not exist")
-    void shouldRegisterUserSuccessfully() {
-        // Given
-        User user = createTestUser();
-        User savedUser = createTestUser();
-        savedUser.setId(1L);
         
-        when(userRepository.existsByEmail(anyString())).thenReturn(Mono.just(false));
-        when(userRepository.save(any(User.class))).thenReturn(Mono.just(savedUser));
-        
-        // When & Then
-        StepVerifier.create(userService.registerUser(user))
-                .expectNext(savedUser)
-                .verifyComplete();
-    }
-    
-    @Test
-    @DisplayName("Should throw UserAlreadyExistsException when email already exists")
-    void shouldThrowExceptionWhenEmailExists() {
-        // Given
-        User user = createTestUser();
-        
-        when(userRepository.existsByEmail(anyString())).thenReturn(Mono.just(true));
-        
-        // When & Then
-        StepVerifier.create(userService.registerUser(user))
-                .expectError(UserAlreadyExistsException.class)
-                .verify();
-    }
-    
-    @Test
-    @DisplayName("Should find user by email successfully")
-    void shouldFindUserByEmail() {
-        // Given
-        String email = "test@example.com";
-        User user = createTestUser();
-        user.setId(1L);
-        
-        when(userRepository.findByEmail(anyString())).thenReturn(Mono.just(user));
-        
-        // When & Then
-        StepVerifier.create(userService.findUserByEmail(email))
-                .expectNext(user)
-                .verifyComplete();
-    }
-    
-    @Test
-    @DisplayName("Should find user by ID successfully")
-    void shouldFindUserById() {
-        // Given
-        Long userId = 1L;
-        User user = createTestUser();
-        user.setId(userId);
-        
-        when(userRepository.findById(any(Long.class))).thenReturn(Mono.just(user));
-        
-        // When & Then
-        StepVerifier.create(userService.findUserById(userId))
-                .expectNext(user)
-                .verifyComplete();
-    }
-    
-    @Test
-    @DisplayName("Should validate user exists returns true")
-    void shouldValidateUserExistsReturnsTrue() {
-        // Given
-        String email = "test@example.com";
-        
-        when(userRepository.existsByEmail(anyString())).thenReturn(Mono.just(true));
-        
-        // When & Then
-        StepVerifier.create(userService.validateUserExists(email))
-                .expectNext(true)
-                .verifyComplete();
-    }
-    
-    @Test
-    @DisplayName("Should validate user exists returns false")
-    void shouldValidateUserExistsReturnsFalse() {
-        // Given
-        String email = "nonexistent@example.com";
-        
-        when(userRepository.existsByEmail(anyString())).thenReturn(Mono.just(false));
-        
-        // When & Then
-        StepVerifier.create(userService.validateUserExists(email))
-                .expectNext(false)
-                .verifyComplete();
-    }
-    
-    @Test
-    @DisplayName("Should update user successfully")
-    void shouldUpdateUser() {
-        // Given
-        User user = createTestUser();
-        user.setId(1L);
-        
-        when(userRepository.update(any(User.class))).thenReturn(Mono.just(user));
-        
-        // When & Then
-        StepVerifier.create(userService.updateUser(user))
-                .expectNext(user)
-                .verifyComplete();
-    }
-    
-    @Test
-    @DisplayName("Should deactivate user successfully")
-    void shouldDeactivateUser() {
-        // Given
-        Long userId = 1L;
-        User user = createTestUser();
-        user.setId(userId);
-        
-        when(userRepository.findById(any(Long.class))).thenReturn(Mono.just(user));
-        when(userRepository.update(any(User.class))).thenReturn(Mono.just(user));
-        
-        // When & Then
-        StepVerifier.create(userService.deactivateUser(userId))
-                .expectNext(true)
-                .verifyComplete();
-    }
-    
-    /**
-     * Helper method to create a test user
-     * @return User instance for testing
-     */
-    private User createTestUser() {
-        return new User(
+        // Create test user
+        testUser = new User(
                 "John",
                 "Doe",
                 LocalDate.of(1990, 1, 1),
                 "123 Main St, City, Country",
                 "+1234567890",
                 "john.doe@example.com",
-                new BigDecimal("50000.00")
+                new BigDecimal("50000")
         );
+    }
+
+    @Test
+    @DisplayName("Should register user successfully when email does not exist")
+    void shouldRegisterUserSuccessfully() {
+        // Given
+        when(userRepository.existsByEmail(testUser.getEmail())).thenReturn(Mono.just(false));
+        when(userRepository.save(any(User.class))).thenReturn(Mono.just(testUser));
+
+        // When & Then
+        StepVerifier.create(userService.registerUser(testUser))
+                .expectNext(testUser)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should throw UserAlreadyExistsException when email already exists")
+    void shouldThrowExceptionWhenEmailExists() {
+        // Given
+        when(userRepository.existsByEmail(testUser.getEmail())).thenReturn(Mono.just(true));
+
+        // When & Then
+        StepVerifier.create(userService.registerUser(testUser))
+                .expectError(UserAlreadyExistsException.class)
+                .verify();
+    }
+
+    @Test
+    @DisplayName("Should find user by email successfully")
+    void shouldFindUserByEmail() {
+        // Given
+        when(userRepository.findByEmail(testUser.getEmail())).thenReturn(Mono.just(testUser));
+
+        // When & Then
+        StepVerifier.create(userService.findUserByEmail(testUser.getEmail()))
+                .expectNext(testUser)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should find user by ID successfully")
+    void shouldFindUserById() {
+        // Given
+        Long userId = 1L;
+        testUser.setId(userId);
+        when(userRepository.findById(userId)).thenReturn(Mono.just(testUser));
+
+        // When & Then
+        StepVerifier.create(userService.findUserById(userId))
+                .expectNext(testUser)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should validate user exists returns true when user exists")
+    void shouldValidateUserExistsReturnsTrue() {
+        // Given
+        when(userRepository.existsByEmail(testUser.getEmail())).thenReturn(Mono.just(true));
+
+        // When & Then
+        StepVerifier.create(userService.validateUserExists(testUser.getEmail()))
+                .expectNext(true)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should validate user exists returns false when user does not exist")
+    void shouldValidateUserExistsReturnsFalse() {
+        // Given
+        when(userRepository.existsByEmail(anyString())).thenReturn(Mono.just(false));
+
+        // When & Then
+        StepVerifier.create(userService.validateUserExists("nonexistent@example.com"))
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should update user successfully")
+    void shouldUpdateUserSuccessfully() {
+        // Given
+        testUser.setId(1L);
+        when(userRepository.update(any(User.class))).thenReturn(Mono.just(testUser));
+
+        // When & Then
+        StepVerifier.create(userService.updateUser(testUser))
+                .expectNext(testUser)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should deactivate user successfully")
+    void shouldDeactivateUserSuccessfully() {
+        // Given
+        Long userId = 1L;
+        testUser.setId(userId);
+        when(userRepository.findById(userId)).thenReturn(Mono.just(testUser));
+        when(userRepository.update(any(User.class))).thenReturn(Mono.just(testUser));
+
+        // When & Then
+        StepVerifier.create(userService.deactivateUser(userId))
+                .expectNext(true)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should handle repository errors gracefully")
+    void shouldHandleRepositoryErrors() {
+        // Given
+        when(userRepository.existsByEmail(anyString())).thenReturn(Mono.error(new RuntimeException("Database error")));
+
+        // When & Then
+        StepVerifier.create(userService.registerUser(testUser))
+                .expectError(RuntimeException.class)
+                .verify();
     }
 }

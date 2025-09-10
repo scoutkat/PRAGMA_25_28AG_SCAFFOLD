@@ -23,4 +23,25 @@ public interface LoanTypeRepository {
      * @return Mono containing the active loan type if found, empty if not found
      */
     Mono<LoanType> findActiveById(Long id);
+    
+    /**
+     * Saves a new loan type to the database
+     * @param loanType the loan type entity to save
+     * @return Mono containing the saved loan type with generated ID
+     */
+    Mono<LoanType> save(LoanType loanType);
+    
+    /**
+     * Updates an existing loan type
+     * @param loanType the loan type entity with updated information
+     * @return Mono containing the updated loan type
+     */
+    Mono<LoanType> update(LoanType loanType);
+    
+    /**
+     * Deletes a loan type by ID
+     * @param id the loan type ID to delete
+     * @return Mono containing true if deleted successfully, false otherwise
+     */
+    Mono<Boolean> deleteById(Long id);
 }

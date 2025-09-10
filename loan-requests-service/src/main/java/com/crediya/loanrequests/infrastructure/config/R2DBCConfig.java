@@ -13,8 +13,8 @@ import java.time.Duration;
 
 /**
  * R2DBC configuration for reactive database access
- * This class configures the PostgreSQL connection using R2DBC
- * Provides connection pooling and database client setup
+ * Configures PostgreSQL connection with connection pooling
+ * Provides DatabaseClient bean for reactive database operations
  */
 @Configuration
 public class R2DBCConfig {
@@ -38,12 +38,12 @@ public class R2DBCConfig {
     private String maxIdleTime;
     
     /**
-     * Creates a PostgreSQL connection factory
-     * @return PostgresqlConnectionFactory instance
+     * Creates PostgreSQL connection factory
+     * @return PostgresqlConnectionFactory
      */
     @Bean
     public PostgresqlConnectionFactory connectionFactory() {
-        // Extract host, port, and database from URL
+        // Parse database URL to extract host, port, and database name
         String url = databaseUrl.replace("r2dbc:postgresql://", "");
         String[] parts = url.split("/");
         String[] hostPort = parts[0].split(":");
@@ -63,9 +63,9 @@ public class R2DBCConfig {
     }
     
     /**
-     * Creates a connection pool for better performance
+     * Creates connection pool for better performance
      * @param connectionFactory the PostgreSQL connection factory
-     * @return ConnectionPool instance
+     * @return ConnectionPool
      */
     @Bean
     public ConnectionPool connectionPool(PostgresqlConnectionFactory connectionFactory) {
@@ -79,9 +79,9 @@ public class R2DBCConfig {
     }
     
     /**
-     * Creates a database client for executing SQL queries
+     * Creates DatabaseClient for reactive database operations
      * @param connectionPool the connection pool
-     * @return DatabaseClient instance
+     * @return DatabaseClient
      */
     @Bean
     public DatabaseClient databaseClient(ConnectionPool connectionPool) {

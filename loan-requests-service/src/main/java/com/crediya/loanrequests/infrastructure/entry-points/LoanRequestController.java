@@ -1,4 +1,4 @@
-package com.crediya.loanrequests.infrastructure.entry-points;
+package com.crediya.loanrequests.infrastructure.entrypoints;
 
 import com.crediya.loanrequests.domain.exception.InvalidLoanRequestException;
 import com.crediya.loanrequests.domain.exception.LoanTypeNotFoundException;
@@ -26,7 +26,7 @@ import reactor.core.publisher.Mono;
 /**
  * REST Controller for loan request management operations
  * Handles HTTP requests and responses using reactive programming with WebFlux
- * Provides endpoints for loan request creation and retrieval
+ * Provides endpoints for loan request creation and management
  */
 @RestController
 @RequestMapping("/api/v1")
@@ -45,7 +45,7 @@ public class LoanRequestController {
     
     /**
      * Creates a new loan request
-     * Validates user existence and loan type, then creates the request
+     * Validates user existence and loan type validity
      * 
      * @param request the loan request creation request
      * @return ResponseEntity containing the created loan request information
@@ -54,8 +54,7 @@ public class LoanRequestController {
     @Operation(
         summary = "Create a new loan request",
         description = "Creates a new loan request with the provided information. " +
-                     "Validates that the user exists and the loan type is valid. " +
-                     "Automatically calculates loan details based on the loan type."
+                     "Validates that the user exists and the loan type is valid."
     )
     @ApiResponses(value = {
         @io.swagger.v3.oas.annotations.responses.ApiResponse(
@@ -94,7 +93,8 @@ public class LoanRequestController {
     public Mono<ResponseEntity<ApiResponse<LoanRequestResponse>>> createLoanRequest(
             @Valid @RequestBody LoanRequestRequest request) {
         
-        logger.info("Received loan request creation request for user: {}", request.getUserEmail());
+        logger.info("Received loan request creation for user: {}, loan type: {}", 
+                request.getUserEmail(), request.getLoanTypeId());
         
         return loanRequestService.createLoanRequest(loanRequestMapper.toDomain(request))
                 .map(loanRequest -> {
@@ -102,8 +102,7 @@ public class LoanRequestController {
                     ApiResponse<LoanRequestResponse> apiResponse = ApiResponse.success(
                             "Loan request created successfully", response);
                     
-                    logger.info("Loan request creation completed successfully for user: {}, ID: {}", 
-                            request.getUserEmail(), loanRequest.getId());
+                    logger.info("Loan request created successfully with ID: {}", loanRequest.getId());
                     return ResponseEntity.status(HttpStatus.CREATED).body(apiResponse);
                 })
                 .onErrorResume(UserValidationException.class, ex -> {
@@ -119,12 +118,6 @@ public class LoanRequestController {
                     return Mono.just(ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse));
                 })
                 .onErrorResume(InvalidLoanRequestException.class, ex -> {
-                    logger.warn("Loan request creation failed - invalid loan request: {}", ex.getMessage());
-                    ApiResponse<LoanRequestResponse> errorResponse = ApiResponse.error(
-                            "Invalid loan request: " + ex.getMessage());
-                    return Mono.just(ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse));
-                })
-                .onErrorResume(IllegalArgumentException.class, ex -> {
                     logger.warn("Loan request creation failed - validation error: {}", ex.getMessage());
                     ApiResponse<LoanRequestResponse> errorResponse = ApiResponse.error(
                             "Validation error: " + ex.getMessage());
@@ -177,7 +170,7 @@ public class LoanRequestController {
         )
     })
     public Mono<ResponseEntity<ApiResponse<LoanRequestResponse>>> getLoanRequestById(
-            @Parameter(description = "Loan request ID to search for", required = true)
+            @Parameter(description = "Loan request ID", required = true)
             @PathVariable Long id) {
         
         logger.info("Received get loan request request for ID: {}", id);
@@ -200,6 +193,73 @@ public class LoanRequestController {
                 .onErrorResume(Exception.class, ex -> {
                     logger.error("Get loan request failed with unexpected error for ID: {}, error: {}", 
                             id, ex.getMessage(), ex);
+                    ApiResponse<LoanRequestResponse> errorResponse = ApiResponse.error(
+                            "An unexpected error occurred while retrieving the loan request");
+                    return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse));
+                });
+    }
+    
+    /**
+     * Gets loan request information by user email
+     * 
+     * @param userEmail the user email to search for
+     * @return ResponseEntity containing loan request information
+     */
+    @GetMapping("/solicitud")
+    @Operation(
+        summary = "Get loan request by user email",
+        description = "Retrieves loan request information by user email"
+    )
+    @ApiResponses(value = {
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "200",
+            description = "Loan request found successfully",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "Loan request not found",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        ),
+        @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "500",
+            description = "Internal server error",
+            content = @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ApiResponse.class)
+            )
+        )
+    })
+    public Mono<ResponseEntity<ApiResponse<LoanRequestResponse>>> getLoanRequestByUserEmail(
+            @Parameter(description = "User email address", required = true)
+            @RequestParam String userEmail) {
+        
+        logger.info("Received get loan request request for user: {}", userEmail);
+        
+        return loanRequestService.findLoanRequestsByUserEmail(userEmail)
+                .map(loanRequest -> {
+                    LoanRequestResponse response = loanRequestMapper.toResponse(loanRequest);
+                    ApiResponse<LoanRequestResponse> apiResponse = ApiResponse.success(
+                            "Loan request found successfully", response);
+                    
+                    logger.info("Loan request retrieved successfully for user: {}", userEmail);
+                    return ResponseEntity.ok(apiResponse);
+                })
+                .switchIfEmpty(Mono.fromCallable(() -> {
+                    logger.info("Loan request not found for user: {}", userEmail);
+                    ApiResponse<LoanRequestResponse> notFoundResponse = ApiResponse.error(
+                            "Loan request not found for user: " + userEmail);
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(notFoundResponse);
+                }))
+                .onErrorResume(Exception.class, ex -> {
+                    logger.error("Get loan request failed with unexpected error for user: {}, error: {}", 
+                            userEmail, ex.getMessage(), ex);
                     ApiResponse<LoanRequestResponse> errorResponse = ApiResponse.error(
                             "An unexpected error occurred while retrieving the loan request");
                     return Mono.just(ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse));

@@ -1,10 +1,7 @@
 version: '3.8'
 
-# Docker Compose configuration for CrediYa microservices
-# This file defines the services needed for local development and testing
-
 services:
-  # PostgreSQL database for Authentication service
+  # PostgreSQL database for authentication service
   postgres-auth:
     image: postgres:15-alpine
     container_name: crediya-postgres-auth
@@ -16,7 +13,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
-      - ./authentication-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     networks:
       - crediya-network
     healthcheck:
@@ -25,7 +21,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # PostgreSQL database for Loan Requests service
+  # PostgreSQL database for loan requests service
   postgres-loans:
     image: postgres:15-alpine
     container_name: crediya-postgres-loans
@@ -37,8 +33,6 @@ services:
       - "5433:5432"
     volumes:
       - postgres_loans_data:/var/lib/postgresql/data
-      - ./loan-requests-service/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-      - ./loan-requests-service/src/main/resources/data.sql:/docker-entrypoint-initdb.d/data.sql
     networks:
       - crediya-network
     healthcheck:
@@ -53,12 +47,12 @@ services:
       context: ./authentication-service
       dockerfile: Dockerfile
     container_name: crediya-authentication-service
-    ports:
-      - "8081:8081"
     environment:
       SPRING_R2DBC_URL: r2dbc:postgresql://postgres-auth:5432/crediya_auth
       SPRING_R2DBC_USERNAME: crediya_user
       SPRING_R2DBC_PASSWORD: crediya_password
+    ports:
+      - "8081:8081"
     depends_on:
       postgres-auth:
         condition: service_healthy
@@ -77,13 +71,14 @@ services:
       context: ./loan-requests-service
       dockerfile: Dockerfile
     container_name: crediya-loan-requests-service
-    ports:
-      - "8082:8082"
     environment:
       SPRING_R2DBC_URL: r2dbc:postgresql://postgres-loans:5432/crediya_loans
       SPRING_R2DBC_USERNAME: crediya_user
       SPRING_R2DBC_PASSWORD: crediya_password
       EXTERNAL_SERVICES_AUTHENTICATION_BASE_URL: http://authentication-service:8081
+      EXTERNAL_SERVICES_AUTHENTICATION_VALIDATE_USER_ENDPOINT: /api/v1/usuarios/validate
+    ports:
+      - "8082:8082"
     depends_on:
       postgres-loans:
         condition: service_healthy
@@ -98,14 +93,10 @@ services:
       retries: 3
       start_period: 40s
 
-# Named volumes for data persistence
 volumes:
   postgres_auth_data:
-    driver: local
   postgres_loans_data:
-    driver: local
 
-# Custom network for service communication
 networks:
   crediya-network:
     driver: bridge

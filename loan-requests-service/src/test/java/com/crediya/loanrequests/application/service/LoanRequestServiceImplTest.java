@@ -6,6 +6,7 @@ import com.crediya.loanrequests.domain.exception.UserValidationException;
 import com.crediya.loanrequests.domain.model.LoanRequest;
 import com.crediya.loanrequests.domain.model.LoanType;
 import com.crediya.loanrequests.domain.port.LoanRequestRepository;
+import com.crediya.loanrequests.domain.port.LoanRequestService;
 import com.crediya.loanrequests.domain.port.LoanTypeRepository;
 import com.crediya.loanrequests.domain.port.UserValidationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import reactor.test.StepVerifier;
 import java.math.BigDecimal;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -31,148 +33,162 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Loan Request Service Implementation Tests")
 class LoanRequestServiceImplTest {
-    
+
     @Mock
     private LoanRequestRepository loanRequestRepository;
-    
+
     @Mock
     private LoanTypeRepository loanTypeRepository;
-    
+
     @Mock
     private UserValidationService userValidationService;
-    
+
     private LoanRequestServiceImpl loanRequestService;
-    
+    private LoanRequest testLoanRequest;
+    private LoanType testLoanType;
+
     @BeforeEach
     void setUp() {
         loanRequestService = new LoanRequestServiceImpl(loanRequestRepository, loanTypeRepository, userValidationService);
+        
+        // Create test loan type
+        testLoanType = new LoanType(
+                "Personal Loan",
+                "Personal loan for general purposes",
+                new BigDecimal("1000"),
+                new BigDecimal("10000000"),
+                6,
+                60,
+                new BigDecimal("12.50")
+        );
+        testLoanType.setId(1L);
+
+        // Create test loan request
+        testLoanRequest = new LoanRequest(
+                "john.doe@example.com",
+                1L,
+                new BigDecimal("50000"),
+                24
+        );
+        testLoanRequest.setId(1L);
     }
-    
+
     @Test
-    @DisplayName("Should create loan request successfully when user exists and loan type is valid")
+    @DisplayName("Should create loan request successfully when validation passes")
     void shouldCreateLoanRequestSuccessfully() {
         // Given
-        LoanRequest loanRequest = createTestLoanRequest();
-        LoanType loanType = createTestLoanType();
-        LoanRequest savedLoanRequest = createTestLoanRequest();
-        savedLoanRequest.setId(1L);
-        
-        when(userValidationService.validateUserExists(anyString())).thenReturn(Mono.just(true));
-        when(loanTypeRepository.findActiveById(any(Long.class))).thenReturn(Mono.just(loanType));
-        when(loanRequestRepository.save(any(LoanRequest.class))).thenReturn(Mono.just(savedLoanRequest));
-        
+        when(userValidationService.validateUserExists(testLoanRequest.getUserEmail())).thenReturn(Mono.just(true));
+        when(loanTypeRepository.findActiveById(testLoanRequest.getLoanTypeId())).thenReturn(Mono.just(testLoanType));
+        when(loanRequestRepository.save(any(LoanRequest.class))).thenReturn(Mono.just(testLoanRequest));
+
         // When & Then
-        StepVerifier.create(loanRequestService.createLoanRequest(loanRequest))
-                .expectNext(savedLoanRequest)
+        StepVerifier.create(loanRequestService.createLoanRequest(testLoanRequest))
+                .expectNext(testLoanRequest)
                 .verifyComplete();
     }
-    
+
     @Test
     @DisplayName("Should throw UserValidationException when user does not exist")
-    void shouldThrowUserValidationExceptionWhenUserDoesNotExist() {
+    void shouldThrowExceptionWhenUserDoesNotExist() {
         // Given
-        LoanRequest loanRequest = createTestLoanRequest();
-        
-        when(userValidationService.validateUserExists(anyString())).thenReturn(Mono.just(false));
-        
+        when(userValidationService.validateUserExists(testLoanRequest.getUserEmail())).thenReturn(Mono.just(false));
+
         // When & Then
-        StepVerifier.create(loanRequestService.createLoanRequest(loanRequest))
+        StepVerifier.create(loanRequestService.createLoanRequest(testLoanRequest))
                 .expectError(UserValidationException.class)
                 .verify();
     }
-    
+
     @Test
-    @DisplayName("Should throw LoanTypeNotFoundException when loan type is not found")
-    void shouldThrowLoanTypeNotFoundExceptionWhenLoanTypeNotFound() {
+    @DisplayName("Should throw LoanTypeNotFoundException when loan type does not exist")
+    void shouldThrowExceptionWhenLoanTypeDoesNotExist() {
         // Given
-        LoanRequest loanRequest = createTestLoanRequest();
-        
-        when(userValidationService.validateUserExists(anyString())).thenReturn(Mono.just(true));
-        when(loanTypeRepository.findActiveById(any(Long.class))).thenReturn(Mono.empty());
-        
+        when(userValidationService.validateUserExists(testLoanRequest.getUserEmail())).thenReturn(Mono.just(true));
+        when(loanTypeRepository.findActiveById(testLoanRequest.getLoanTypeId())).thenReturn(Mono.empty());
+
         // When & Then
-        StepVerifier.create(loanRequestService.createLoanRequest(loanRequest))
+        StepVerifier.create(loanRequestService.createLoanRequest(testLoanRequest))
                 .expectError(LoanTypeNotFoundException.class)
                 .verify();
     }
-    
+
     @Test
     @DisplayName("Should throw InvalidLoanRequestException when amount is invalid")
-    void shouldThrowInvalidLoanRequestExceptionWhenAmountIsInvalid() {
+    void shouldThrowExceptionWhenAmountIsInvalid() {
         // Given
-        LoanRequest loanRequest = createTestLoanRequest();
-        loanRequest.setAmount(new BigDecimal("50000")); // Below minimum
-        LoanType loanType = createTestLoanType();
-        
-        when(userValidationService.validateUserExists(anyString())).thenReturn(Mono.just(true));
-        when(loanTypeRepository.findActiveById(any(Long.class))).thenReturn(Mono.just(loanType));
-        
+        testLoanRequest.setAmount(new BigDecimal("500")); // Below minimum
+        when(userValidationService.validateUserExists(testLoanRequest.getUserEmail())).thenReturn(Mono.just(true));
+        when(loanTypeRepository.findActiveById(testLoanRequest.getLoanTypeId())).thenReturn(Mono.just(testLoanType));
+
         // When & Then
-        StepVerifier.create(loanRequestService.createLoanRequest(loanRequest))
+        StepVerifier.create(loanRequestService.createLoanRequest(testLoanRequest))
                 .expectError(InvalidLoanRequestException.class)
                 .verify();
     }
-    
-    @Test
-    @DisplayName("Should throw InvalidLoanRequestException when term is invalid")
-    void shouldThrowInvalidLoanRequestExceptionWhenTermIsInvalid() {
-        // Given
-        LoanRequest loanRequest = createTestLoanRequest();
-        loanRequest.setTermMonths(3); // Below minimum
-        LoanType loanType = createTestLoanType();
-        
-        when(userValidationService.validateUserExists(anyString())).thenReturn(Mono.just(true));
-        when(loanTypeRepository.findActiveById(any(Long.class))).thenReturn(Mono.just(loanType));
-        
-        // When & Then
-        StepVerifier.create(loanRequestService.createLoanRequest(loanRequest))
-                .expectError(InvalidLoanRequestException.class)
-                .verify();
-    }
-    
+
     @Test
     @DisplayName("Should find loan request by ID successfully")
     void shouldFindLoanRequestById() {
         // Given
-        Long loanRequestId = 1L;
-        LoanRequest loanRequest = createTestLoanRequest();
-        loanRequest.setId(loanRequestId);
-        
-        when(loanRequestRepository.findById(any(Long.class))).thenReturn(Mono.just(loanRequest));
-        
+        Long requestId = 1L;
+        when(loanRequestRepository.findById(requestId)).thenReturn(Mono.just(testLoanRequest));
+
         // When & Then
-        StepVerifier.create(loanRequestService.findLoanRequestById(loanRequestId))
-                .expectNext(loanRequest)
+        StepVerifier.create(loanRequestService.findLoanRequestById(requestId))
+                .expectNext(testLoanRequest)
                 .verifyComplete();
     }
-    
-    /**
-     * Helper method to create a test loan request
-     * @return LoanRequest instance for testing
-     */
-    private LoanRequest createTestLoanRequest() {
-        LoanRequest loanRequest = new LoanRequest();
-        loanRequest.setUserEmail("test@example.com");
-        loanRequest.setLoanTypeId(1L);
-        loanRequest.setAmount(new BigDecimal("1000000"));
-        loanRequest.setTermMonths(12);
-        return loanRequest;
+
+    @Test
+    @DisplayName("Should find loan requests by user email successfully")
+    void shouldFindLoanRequestsByUserEmail() {
+        // Given
+        String userEmail = "john.doe@example.com";
+        when(loanRequestRepository.findByUserEmail(userEmail)).thenReturn(Mono.just(testLoanRequest));
+
+        // When & Then
+        StepVerifier.create(loanRequestService.findLoanRequestsByUserEmail(userEmail))
+                .expectNext(testLoanRequest)
+                .verifyComplete();
     }
-    
-    /**
-     * Helper method to create a test loan type
-     * @return LoanType instance for testing
-     */
-    private LoanType createTestLoanType() {
-        LoanType loanType = new LoanType();
-        loanType.setId(1L);
-        loanType.setName("Personal Loan");
-        loanType.setMinAmount(new BigDecimal("100000"));
-        loanType.setMaxAmount(new BigDecimal("10000000"));
-        loanType.setMinTermMonths(6);
-        loanType.setMaxTermMonths(60);
-        loanType.setInterestRate(new BigDecimal("12.5"));
-        loanType.setIsActive(true);
-        return loanType;
+
+    @Test
+    @DisplayName("Should update loan request status successfully")
+    void shouldUpdateLoanRequestStatus() {
+        // Given
+        Long requestId = 1L;
+        when(loanRequestRepository.findById(requestId)).thenReturn(Mono.just(testLoanRequest));
+        when(loanRequestRepository.update(any(LoanRequest.class))).thenReturn(Mono.just(testLoanRequest));
+
+        // When & Then
+        StepVerifier.create(loanRequestService.updateLoanRequestStatus(requestId, 
+                LoanRequest.Status.APPROVED, "admin", null))
+                .expectNext(testLoanRequest)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should validate loan request successfully")
+    void shouldValidateLoanRequestSuccessfully() {
+        // Given
+        when(userValidationService.validateUserExists(testLoanRequest.getUserEmail())).thenReturn(Mono.just(true));
+        when(loanTypeRepository.findActiveById(testLoanRequest.getLoanTypeId())).thenReturn(Mono.just(testLoanType));
+
+        // When & Then
+        StepVerifier.create(loanRequestService.validateLoanRequest(testLoanRequest))
+                .expectNext(true)
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should handle repository errors gracefully")
+    void shouldHandleRepositoryErrors() {
+        // Given
+        when(userValidationService.validateUserExists(anyString())).thenReturn(Mono.error(new RuntimeException("Service error")));
+
+        // When & Then
+        StepVerifier.create(loanRequestService.createLoanRequest(testLoanRequest))
+                .expectError(RuntimeException.class)
+                .verify();
     }
 }

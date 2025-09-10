@@ -75,6 +75,86 @@ public class R2DBCLoanTypeRepository implements LoanTypeRepository {
                         id, error.getMessage()));
     }
     
+    @Override
+    public Mono<LoanType> save(LoanType loanType) {
+        logger.debug("Saving loan type to database: {}", loanType.getName());
+        
+        String insertQuery = """
+            INSERT INTO loan_types (name, description, min_amount, max_amount, min_term_months, 
+                                  max_term_months, interest_rate, is_active, created_at, updated_at)
+            VALUES (:name, :description, :minAmount, :maxAmount, :minTermMonths, :maxTermMonths, 
+                    :interestRate, :isActive, :createdAt, :updatedAt)
+            """;
+        
+        return databaseClient.sql(insertQuery)
+                .bind("name", loanType.getName())
+                .bind("description", loanType.getDescription())
+                .bind("minAmount", loanType.getMinAmount())
+                .bind("maxAmount", loanType.getMaxAmount())
+                .bind("minTermMonths", loanType.getMinTermMonths())
+                .bind("maxTermMonths", loanType.getMaxTermMonths())
+                .bind("interestRate", loanType.getInterestRate())
+                .bind("isActive", loanType.getIsActive())
+                .bind("createdAt", loanType.getCreatedAt())
+                .bind("updatedAt", loanType.getUpdatedAt())
+                .filter((statement, executeFunction) -> statement.returnGeneratedValues("id"))
+                .map((row, metadata) -> {
+                    loanType.setId(row.get("id", Long.class));
+                    return loanType;
+                })
+                .one()
+                .doOnSuccess(savedLoanType -> logger.debug("Loan type saved successfully with ID: {}", 
+                        savedLoanType.getId()))
+                .doOnError(error -> logger.error("Error saving loan type: {}", error.getMessage()));
+    }
+    
+    @Override
+    public Mono<LoanType> update(LoanType loanType) {
+        logger.debug("Updating loan type: {}", loanType.getId());
+        
+        String updateQuery = """
+            UPDATE loan_types 
+            SET name = :name, description = :description, min_amount = :minAmount, max_amount = :maxAmount, 
+                min_term_months = :minTermMonths, max_term_months = :maxTermMonths, 
+                interest_rate = :interestRate, is_active = :isActive, updated_at = :updatedAt
+            WHERE id = :id
+            """;
+        
+        return databaseClient.sql(updateQuery)
+                .bind("id", loanType.getId())
+                .bind("name", loanType.getName())
+                .bind("description", loanType.getDescription())
+                .bind("minAmount", loanType.getMinAmount())
+                .bind("maxAmount", loanType.getMaxAmount())
+                .bind("minTermMonths", loanType.getMinTermMonths())
+                .bind("maxTermMonths", loanType.getMaxTermMonths())
+                .bind("interestRate", loanType.getInterestRate())
+                .bind("isActive", loanType.getIsActive())
+                .bind("updatedAt", loanType.getUpdatedAt())
+                .then(Mono.just(loanType))
+                .doOnSuccess(updatedLoanType -> logger.debug("Loan type updated successfully: {}", 
+                        updatedLoanType.getId()))
+                .doOnError(error -> logger.error("Error updating loan type: {}, error: {}", 
+                        loanType.getId(), error.getMessage()));
+    }
+    
+    @Override
+    public Mono<Boolean> deleteById(Long id) {
+        logger.debug("Deleting loan type by ID: {}", id);
+        
+        String deleteQuery = "UPDATE loan_types SET is_active = false, updated_at = :updatedAt WHERE id = :id";
+        
+        return databaseClient.sql(deleteQuery)
+                .bind("id", id)
+                .bind("updatedAt", LocalDateTime.now())
+                .fetch()
+                .rowsUpdated()
+                .map(rowsUpdated -> rowsUpdated > 0)
+                .doOnSuccess(deleted -> logger.debug("Loan type deletion result for ID {}: {}", id, deleted))
+                .doOnError(error -> logger.error("Error deleting loan type by ID: {}, error: {}", 
+                        id, error.getMessage()));
+    }
+    
     /**
      * Maps database row to LoanType entity
      * @param row the database row

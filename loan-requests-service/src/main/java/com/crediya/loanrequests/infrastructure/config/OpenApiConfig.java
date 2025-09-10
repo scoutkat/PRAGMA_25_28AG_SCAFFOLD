@@ -5,6 +5,7 @@ import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,15 +13,18 @@ import java.util.List;
 
 /**
  * OpenAPI/Swagger configuration for API documentation
- * This class configures the Swagger UI and OpenAPI documentation
- * Provides comprehensive API documentation for the loan requests service
+ * Provides comprehensive API documentation for the Loan Requests Service
+ * Includes server information, contact details, and API metadata
  */
 @Configuration
 public class OpenApiConfig {
     
+    @Value("${server.port:8082}")
+    private String serverPort;
+    
     /**
-     * Creates OpenAPI configuration for API documentation
-     * @return OpenAPI instance with service information
+     * Creates OpenAPI configuration for Swagger documentation
+     * @return OpenAPI configuration
      */
     @Bean
     public OpenAPI customOpenAPI() {
@@ -28,18 +32,16 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("CrediYa Loan Requests Service API")
                         .description("""
-                                This API provides endpoints for managing loan requests in the CrediYa platform.
+                                Microservice for loan request management and processing in the CrediYa platform.
                                 
-                                ## Features
-                                - Create loan requests with user validation
-                                - Validate loan types and calculate loan details
-                                - Track loan request status and history
+                                This service provides the following functionality:
+                                - Loan request creation and validation
+                                - User validation through authentication service
+                                - Loan type validation and calculation
+                                - Loan request status management
                                 
-                                ## Authentication
-                                This service communicates with the Authentication service to validate users.
-                                
-                                ## Loan Types
-                                Different loan types are available with varying interest rates and terms.
+                                The service follows reactive programming principles using WebFlux
+                                and implements hexagonal architecture for better maintainability.
                                 """)
                         .version("1.0.0")
                         .contact(new Contact()
@@ -51,11 +53,11 @@ public class OpenApiConfig {
                                 .url("https://opensource.org/licenses/MIT")))
                 .servers(List.of(
                         new Server()
-                                .url("http://localhost:8082")
-                                .description("Development Server"),
+                                .url("http://localhost:" + serverPort)
+                                .description("Local development server"),
                         new Server()
-                                .url("https://api.crediya.com/loan-requests")
-                                .description("Production Server")
+                                .url("https://api.crediya.com/loans")
+                                .description("Production server")
                 ));
     }
 }

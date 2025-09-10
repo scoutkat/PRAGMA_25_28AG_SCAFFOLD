@@ -5,9 +5,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * DTO for loan request response
- * Contains the loan request information to be returned to the client
- * Used in the API layer to send loan request data
+ * DTO for loan request response data
+ * Used to return loan request information in API responses
+ * Excludes sensitive information and provides a clean API interface
  */
 public class LoanRequestResponse {
     
@@ -17,17 +17,18 @@ public class LoanRequestResponse {
     private BigDecimal amount;
     private Integer termMonths;
     private String status;
+    private String statusDisplayName;
     private BigDecimal monthlyPayment;
     private BigDecimal totalInterest;
     private BigDecimal totalAmount;
     
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;
     
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updatedAt;
     
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime reviewedAt;
     
     private String reviewedBy;
@@ -35,6 +36,29 @@ public class LoanRequestResponse {
     
     // Default constructor
     public LoanRequestResponse() {}
+    
+    // Constructor with all fields
+    public LoanRequestResponse(Long id, String userEmail, Long loanTypeId, BigDecimal amount,
+                              Integer termMonths, String status, String statusDisplayName,
+                              BigDecimal monthlyPayment, BigDecimal totalInterest, BigDecimal totalAmount,
+                              LocalDateTime createdAt, LocalDateTime updatedAt, LocalDateTime reviewedAt,
+                              String reviewedBy, String rejectionReason) {
+        this.id = id;
+        this.userEmail = userEmail;
+        this.loanTypeId = loanTypeId;
+        this.amount = amount;
+        this.termMonths = termMonths;
+        this.status = status;
+        this.statusDisplayName = statusDisplayName;
+        this.monthlyPayment = monthlyPayment;
+        this.totalInterest = totalInterest;
+        this.totalAmount = totalAmount;
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.reviewedAt = reviewedAt;
+        this.reviewedBy = reviewedBy;
+        this.rejectionReason = rejectionReason;
+    }
     
     // Getters and Setters
     public Long getId() {
@@ -83,6 +107,14 @@ public class LoanRequestResponse {
     
     public void setStatus(String status) {
         this.status = status;
+    }
+    
+    public String getStatusDisplayName() {
+        return statusDisplayName;
+    }
+    
+    public void setStatusDisplayName(String statusDisplayName) {
+        this.statusDisplayName = statusDisplayName;
     }
     
     public BigDecimal getMonthlyPayment() {
@@ -147,5 +179,17 @@ public class LoanRequestResponse {
     
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
+    }
+    
+    @Override
+    public String toString() {
+        return "LoanRequestResponse{" +
+                "id=" + id +
+                ", userEmail='" + userEmail + '\'' +
+                ", loanTypeId=" + loanTypeId +
+                ", amount=" + amount +
+                ", termMonths=" + termMonths +
+                ", status='" + status + '\'' +
+                '}';
     }
 }

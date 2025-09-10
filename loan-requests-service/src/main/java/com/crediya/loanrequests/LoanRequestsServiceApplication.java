@@ -6,9 +6,8 @@ import org.springframework.data.r2dbc.repository.config.EnableR2dbcRepositories;
 
 /**
  * Main application class for CrediYa Loan Requests Service
- * This microservice handles loan request management and processing
+ * This microservice handles loan request creation and management
  * Uses WebFlux for reactive programming and R2DBC for reactive database access
- * Communicates with Authentication service for user validation
  */
 @SpringBootApplication
 @EnableR2dbcRepositories

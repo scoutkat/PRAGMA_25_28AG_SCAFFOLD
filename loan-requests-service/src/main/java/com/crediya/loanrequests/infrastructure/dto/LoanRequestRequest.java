@@ -18,12 +18,12 @@ public class LoanRequestRequest {
     private String userEmail;
     
     @NotNull(message = "Loan type ID is required")
-    @Positive(message = "Loan type ID must be a positive number")
+    @Positive(message = "Loan type ID must be positive")
     private Long loanTypeId;
     
     @NotNull(message = "Amount is required")
-    @DecimalMin(value = "1.0", message = "Amount must be greater than 0")
-    @DecimalMax(value = "50000000.0", message = "Amount must be less than or equal to 50,000,000")
+    @DecimalMin(value = "1000.0", message = "Amount must be at least 1,000")
+    @DecimalMax(value = "50000000.0", message = "Amount must not exceed 50,000,000")
     private BigDecimal amount;
     
     @NotNull(message = "Term in months is required")

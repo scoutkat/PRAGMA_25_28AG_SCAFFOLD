@@ -1,37 +1,36 @@
 package com.crediya.loanrequests.infrastructure.dto;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDateTime;
 
 /**
- * Generic API response wrapper for consistent response format
- * This DTO provides a standardized structure for all API responses
- * Includes success status, message, and data payload
+ * Generic API response wrapper
+ * Provides a consistent response format for all API endpoints
+ * Includes status, message, data, and timestamp information
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
     
     private boolean success;
     private String message;
     private T data;
-    private String error;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime timestamp;
     
     // Default constructor
-    public ApiResponse() {}
+    public ApiResponse() {
+        this.timestamp = LocalDateTime.now();
+    }
     
-    // Constructor for success responses
+    // Constructor for successful responses
     public ApiResponse(boolean success, String message, T data) {
         this.success = success;
         this.message = message;
         this.data = data;
+        this.timestamp = LocalDateTime.now();
     }
     
-    // Constructor for error responses
-    public ApiResponse(boolean success, String error) {
-        this.success = success;
-        this.error = error;
-    }
-    
-    // Static factory methods for creating responses
+    // Static factory methods for common response types
     public static <T> ApiResponse<T> success(String message, T data) {
         return new ApiResponse<>(true, message, data);
     }
@@ -40,8 +39,12 @@ public class ApiResponse<T> {
         return new ApiResponse<>(true, message, null);
     }
     
-    public static <T> ApiResponse<T> error(String error) {
-        return new ApiResponse<>(false, error);
+    public static <T> ApiResponse<T> error(String message) {
+        return new ApiResponse<>(false, message, null);
+    }
+    
+    public static <T> ApiResponse<T> error(String message, T data) {
+        return new ApiResponse<>(false, message, data);
     }
     
     // Getters and Setters
@@ -69,11 +72,21 @@ public class ApiResponse<T> {
         this.data = data;
     }
     
-    public String getError() {
-        return error;
+    public LocalDateTime getTimestamp() {
+        return timestamp;
     }
     
-    public void setError(String error) {
-        this.error = error;
+    public void setTimestamp(LocalDateTime timestamp) {
+        this.timestamp = timestamp;
+    }
+    
+    @Override
+    public String toString() {
+        return "ApiResponse{" +
+                "success=" + success +
+                ", message='" + message + '\'' +
+                ", data=" + data +
+                ", timestamp=" + timestamp +
+                '}';
     }
 }
